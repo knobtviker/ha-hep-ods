@@ -6,8 +6,7 @@ app = Flask(__name__)
 
 # Dummy database
 USERS = {
-    "testuser": "password123",
-    "bojan.komljenovic@gmail.com": "uWKrB.J62nN2zP3Xh8qd@B6KtYDkw7TH"
+    "testuser": "password123"
 }
 
 @app.route('/elektra/v1/api/korisnik/prijava', methods=['POST'])
