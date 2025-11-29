@@ -1,0 +1,22 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "HEP Elektra ODS Login",
+                "description": "Enter your HEP Elektra ODS account credentials",
+                "data": {
+                    "username": "Email or Username",
+                    "password": "Password"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to HEP servers. Please check your internet connection.",
+            "invalid_auth": "Invalid username or password. Please check your credentials.",
+            "unknown": "An unexpected error occurred. Please try again."
+        },
+        "abort": {
+            "already_configured": "This HEP account is already configured."
+        }
+    }
+}
