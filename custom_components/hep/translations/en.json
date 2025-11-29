@@ -5,7 +5,7 @@
                 "title": "HEP Elektra ODS Login",
                 "description": "Enter your HEP Elektra ODS account credentials",
                 "data": {
-                    "username": "Email or Username",
+                    "username": "Email",
                     "password": "Password"
                 }
             }

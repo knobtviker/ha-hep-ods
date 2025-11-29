@@ -131,8 +131,8 @@ class HepBaseSensor(CoordinatorEntity, SensorEntity):
         # Device info - group all sensors under one device per account
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, str(account.kupac_id))},
-            name=f"HEP {account.naziv}",
-            manufacturer="HEP Elektra",
+            name=f"OMM: {account.broj_brojila}",
+            manufacturer="HEP Elektra ODS",
             model="Electricity Account",
             configuration_url="https://mojracun.hep.hr",
         )
@@ -373,8 +373,8 @@ class HepWarningBinarySensor(CoordinatorEntity, BinarySensorEntity):
         # Device info
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, str(account.kupac_id))},
-            name=f"HEP {account.naziv}",
-            manufacturer="HEP Elektra",
+            name=f"OMM: {account.broj_brojila}",
+            manufacturer="HEP Elektra ODS",
             model="Electricity Account",
             configuration_url="https://mojracun.hep.hr",
         )
