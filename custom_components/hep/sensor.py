@@ -130,7 +130,7 @@ class HepBaseSensor(CoordinatorEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator)
         self._account = account
-        self._attr_name = f"HEP {account.naziv} {name}"
+        self._attr_name = name  # Just the sensor name, no prefix
         self._attr_unique_id = f"hep_{account.kupac_id}_{name.lower().replace(' ', '_')}"
         
         # Device info - group all sensors under one device per account
@@ -374,7 +374,7 @@ class HepWarningBinarySensor(CoordinatorEntity, BinarySensorEntity):
         """Initialize the warning binary sensor."""
         super().__init__(coordinator)
         self._account = account
-        self._attr_name = f"HEP {account.naziv} Payment Warning"
+        self._attr_name = "Payment Warning" # Just the sensor name, no prefix
         self._attr_unique_id = f"hep_{account.kupac_id}_payment_warning"
         self._attr_device_class = BinarySensorDeviceClass.PROBLEM
         
