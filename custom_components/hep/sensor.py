@@ -32,8 +32,8 @@ async def async_setup_entry(
     await coordinator.async_config_entry_first_refresh()
 
     entities = []
-    if coordinator.data and coordinator.data.user and coordinator.data.user.accounts:
-        for account in coordinator.data.user.accounts:
+    if coordinator.data and coordinator.data.get("user") and coordinator.data.get("user").accounts:
+        for account in coordinator.data["user"].accounts:
             # Current meter readings
             entities.append(HepMeterReadingSensor(coordinator, account, "Tarifa 1", "br_tarifa1"))
             entities.append(HepMeterReadingSensor(coordinator, account, "Tarifa 2", "br_tarifa2"))
@@ -51,6 +51,8 @@ async def async_setup_entry(
             
             # Warning binary sensor
             entities.append(HepWarningBinarySensor(coordinator, account))
+    else:
+        _LOGGER.error("No user data available in coordinator. Data structure: %s", coordinator.data)
 
     async_add_entities(entities)
 
