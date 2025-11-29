@@ -86,26 +86,31 @@ class HepDataUpdateCoordinator(DataUpdateCoordinator):
             
             if user_data.accounts:
                 kupac_id = user_data.accounts[0].kupac_id
+                _LOGGER.debug("Fetching additional data for account: %s", kupac_id)
                 
                 try:
                     billing_data = await self.client.get_billing(kupac_id)
+                    _LOGGER.debug("Billing data fetched: %s", billing_data)
                 except Exception as e:
-                    _LOGGER.warning("Failed to fetch billing data: %s", e)
+                    _LOGGER.error("Failed to fetch billing data: %s", e, exc_info=True)
                 
                 try:
                     consumption_data = await self.client.get_consumption(kupac_id)
+                    _LOGGER.debug("Consumption data fetched: %s records", len(consumption_data) if consumption_data else 0)
                 except Exception as e:
-                    _LOGGER.warning("Failed to fetch consumption data: %s", e)
+                    _LOGGER.error("Failed to fetch consumption data: %s", e, exc_info=True)
                 
                 try:
                     warnings_data = await self.client.get_warnings(kupac_id)
+                    _LOGGER.debug("Warnings data fetched: %s warnings", len(warnings_data) if warnings_data else 0)
                 except Exception as e:
-                    _LOGGER.warning("Failed to fetch warnings data: %s", e)
+                    _LOGGER.error("Failed to fetch warnings data: %s", e, exc_info=True)
                 
                 try:
                     prices_data = await self.client.get_prices()
+                    _LOGGER.debug("Prices data fetched: %s", prices_data is not None)
                 except Exception as e:
-                    _LOGGER.warning("Failed to fetch prices data: %s", e)
+                    _LOGGER.error("Failed to fetch prices data: %s", e, exc_info=True)
             
             return {
                 "user": user_data,
@@ -197,11 +202,14 @@ class HepBalanceSensor(HepBaseSensor):
     def native_value(self):
         """Return the state of the sensor."""
         if not self.coordinator.data or not self.coordinator.data.get("billing"):
+            _LOGGER.debug("Balance sensor: No billing data in coordinator")
             return None
         
         billing = self.coordinator.data["billing"]
         if billing and billing.balance:
+            _LOGGER.debug("Balance sensor value: %s", billing.balance.iznos)
             return billing.balance.iznos
+        _LOGGER.debug("Balance sensor: billing or balance is None")
         return None
 
     @property
