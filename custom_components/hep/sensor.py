@@ -73,7 +73,11 @@ class HepDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """Fetch data from API."""
         try:
-            # Fetch user data
+            # Re-authenticate to get fresh session cookies
+            if not await self.client.authenticate():
+                raise UpdateFailed("Authentication failed")
+            
+            # Fetch user data (already fetched during authenticate, but this ensures consistency)
             user_data = await self.client.get_data()
             if not user_data:
                 raise UpdateFailed("No user data returned from API")
