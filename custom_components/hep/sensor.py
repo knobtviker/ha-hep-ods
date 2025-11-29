@@ -326,7 +326,7 @@ class HepConsumptionHistorySensor(HepBaseSensor):
 
     def __init__(self, coordinator, account: HepAccount, tariff_name: str, attribute: str):
         """Initialize the consumption history sensor."""
-        super().__init__(coordinator, account, f"Last Period {tariff_name}")
+        super().__init__(coordinator, account, f"Consumption {tariff_name}")
         self._attribute = attribute
         self._attr_device_class = SensorDeviceClass.ENERGY
         self._attr_state_class = SensorStateClass.TOTAL
