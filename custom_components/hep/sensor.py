@@ -327,7 +327,46 @@ class HepWarningBinarySensor(CoordinatorEntity, BinarySensorEntity):
             return False
         
         warnings = self.coordinator.data["warnings"]
-        return warnings and len(warnings) > 0
+        if not warnings:
+            return False
+            
+        # Filter warnings: only show ON if warning date is between current month -1 and current month +1
+        try:
+            now = datetime.now()
+            # Start of current month
+            current_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            # Start of previous month
+            prev_month_end = current_month_start - timedelta(days=1)
+            start_date = prev_month_end.replace(day=1)
+            
+            # End of next month
+            # Add 32 days to current month start to get into next month
+            next_month_start = (current_month_start + timedelta(days=32)).replace(day=1)
+            # Add 32 days to next month start to get into month after next
+            month_after_next_start = (next_month_start + timedelta(days=32)).replace(day=1)
+            # Subtract 1 day to get end of next month
+            end_date = month_after_next_start - timedelta(days=1)
+            
+            for w in warnings:
+                if not w.datum_izdavanja:
+                    continue
+                    
+                # Parse date (handle Z suffix)
+                dt_str = w.datum_izdavanja.replace("Z", "+00:00")
+                w_date = datetime.fromisoformat(dt_str)
+                
+                # Compare dates (ignoring time and timezone for simplicity in month check)
+                if start_date.date() <= w_date.date() <= end_date.date():
+                    return True
+                    
+            return False
+            
+        except Exception as e:
+            _LOGGER.error("Error processing warning dates: %s", e)
+            # Fallback: if we can't parse, but there are warnings, maybe default to True or False?
+            # Let's default to False to avoid false positives if logic fails
+            return False
 
     @property
     def extra_state_attributes(self):
