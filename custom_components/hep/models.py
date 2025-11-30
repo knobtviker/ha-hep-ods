@@ -257,6 +257,19 @@ class HepOmmCheck:
         )
 
 @dataclass
+class HepOmmCheckResult:
+    """Result of OMM check including encryption value."""
+    omm_check: HepOmmCheck
+    enc_value: str
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "HepOmmCheckResult":
+        return cls(
+            omm_check=HepOmmCheck.from_dict(data.get("Provjera_OmmDto", {})),
+            enc_value=data.get("encValue", ""),
+        )
+
+@dataclass
 class HepReadingSubmissionResult:
     """Result of reading submission (Dostava)."""
     status: int

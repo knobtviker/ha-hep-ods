@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 from dotenv import load_dotenv
 
 # Mock Home Assistant modules
-# Mock Home Assistant modules
 sys.modules["homeassistant"] = MagicMock()
 sys.modules["homeassistant.core"] = MagicMock()
 sys.modules["homeassistant.config_entries"] = MagicMock()
@@ -23,15 +22,14 @@ from custom_components.hep.api import HepApiClient
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(message)s"
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 _LOGGER = logging.getLogger(__name__)
 
 async def main():
     print("--- Starting HEP Remote API Test ---")
 
-    
     load_dotenv()
     username = os.getenv("HEP_USERNAME")
     password = os.getenv("HEP_PASSWORD")
@@ -41,9 +39,6 @@ async def main():
 
     async with aiohttp.ClientSession() as session:
         client = HepApiClient(username, password, session)
-        # Point to real API
-        client.set_base_url("https://mojracun.hep.hr/elektra/v1/api")
-        client.set_mojamreza_url("https://mojamreza.hep.hr")
 
         print("\n[1] Authenticating...")
         if await client.authenticate():
@@ -130,33 +125,6 @@ async def main():
                     print("Warnings fetch returned None or empty (Good!)")
             except Exception as e:
                 print(f"Error fetching warnings: {e}")
-
-
-        # OMM check - now using auto-token fetching
-        if user_data and user_data.accounts:
-            account = user_data.accounts[0]
-            omm_id = account.broj_brojila
-            
-            print(f"\n[7] Checking OMM status for {omm_id}...")
-            try:
-                # The client will automatically fetch tokens from the OMM page
-                omm_check = await client.check_omm(omm_id)
-                if omm_check:
-                    print("OMM check successful!")
-                    print(f"  OMM: {omm_check.omm}")
-                    print(f"  Number of tariffs: {omm_check.br_tarifa}")
-                    print(f"  Status: {omm_check.status.opis} (code: {omm_check.status.status})")
-                    if omm_check.br_tarifa >= 1:
-                        print(f"  Tariff 1 range: {omm_check.tarifa1_od} - {omm_check.tarifa1_do}")
-                    if omm_check.br_tarifa >= 2:
-                        print(f"  Tariff 2 range: {omm_check.tarifa2_od} - {omm_check.tarifa2_do}")
-                else:
-                    print("OMM check returned None")
-            except Exception as e:
-                print(f"Error checking OMM: {e}")
-        else:
-            print("\n[7] OMM check - skipped (no account data)")
-
 
     print("\n--- Test Finished ---")
 

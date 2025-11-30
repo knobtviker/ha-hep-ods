@@ -4,8 +4,14 @@ import aiohttp
 import async_timeout
 from typing import List
 import re
-from .models import HepUser, HepPrices, HepBillingInfo, HepConsumption, HepWarning, HepOmmCheck, HepReadingSubmissionResult
+import time
+from .models import HepUser, HepPrices, HepBillingInfo, HepConsumption, HepWarning, HepOmmCheck, HepOmmCheckResult, HepReadingSubmissionResult
 
+# Configure logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 _LOGGER = logging.getLogger(__name__)
 
 class HepApiClient:
@@ -18,12 +24,7 @@ class HepApiClient:
         self._session = session
         self._user_data = None
         self._cookies = {}
-        # Real HEP API URL
         self._base_url = "https://mojracun.hep.hr/elektra/v1/api"
-        self._mojamreza_url = "https://mojamreza.hep.hr"
-        # For local testing, we might want to override this.
-        # Ideally, we'd pass this in or have a way to configure it.
-        # But for now, let's stick to the real one as default, and test_local can patch it or we can add a kwarg.
         self._headers = {
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
             "Content-Type": "application/json",
@@ -31,21 +32,6 @@ class HepApiClient:
             "Accept-Encoding": "gzip, deflate, br, zstd",
             "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
         }
-
-    def set_base_url(self, url):
-        """Set base URL (for testing)."""
-        self._base_url = url
-
-    def set_mojamreza_url(self, url):
-        """Set Moja Mreza URL (for testing)."""
-        self._mojamreza_url = url
-
-
-# We aren't setting Cookie header with these values and accessToken is one of them: 
-
-# _ga_EV31QJNEL6=GS2.2.s1762104619$o2$g0$t1762104619$j60$l0$h0; _ga_6BQVKC4H63=GS2.2.s1762104619$o2$g0$t1762104619$j60$l0$h0; _ga=GA1.1.554793247.1762102536; _ga_DLRESD84RV=GS2.1.s1764433944$o1$g1$t1764434506$j60$l0$h0; accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJib2phbi5rb21samVub3ZpY0BnbWFpbC5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYm9qYW4ua29tbGplbm92aWNAZ21haWwuY29tIiwiaWQiOiI5MDI3MTE0MyIsImp0aSI6ImRhYjVmZGM5LTEwNGMtNGMzNi05ZDk5LWRlNzI0Y2VjMDRmNSIsImV4cCI6MTc2NDQ0NDc4MCwiaXNzIjoibW9qcmFjdW4uaGVwLmhyIiwiYXVkIjoidXNlcnMifQ.RJdjS8on2uHp8gEEsRfdBF8V60esMi4PDhuofF3V3EY; TS0132729f=01e51bd9b2d61f4a1478d4db188bcd993d94a32a204fd67b62140c6b984616a6294eb51168f2c4839a1b139913bce2a493de7831a10e39bfad96ba57af137bfb1d61799cd2
-
-# Authentication sets that token exatly in response headers set-cookie twice with different values.
 
     async def authenticate(self) -> bool:
         """Authenticate with the API and fetch data."""
@@ -259,24 +245,61 @@ class HepApiClient:
              _LOGGER.error("Error fetching warnings: %s", e)
              raise
 
-    async def _initialize_omm_session(self, omm: str):
-        """Initialize OMM session by visiting the Dostava page to get cookies."""
+class HepOmmClient:
+    """HEP OMM Client."""
+
+    def __init__(self, omm_id, session):
+        """Initialize the OMM client."""
+        self._omm_id = omm_id
+        self._session = session
+        self._cookies = {}
+        self._base_url = "https://mojamreza.hep.hr"
+        self._headers = {
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+            "Connection": "keep-alive",
+            "Host": self._base_url.replace("https://", "").replace("http://", ""),
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+            "sec-ch-ua": '"Chromium";v="142", "Wavebox";v="142", "Not_A Brand";v="99"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "macOS"
+        }
+        self._check_form_token = ""
+        self._delivery_form_token = ""
+
+    async def initialize_session(self):
+        """Initialize session by visiting the Dostava page to get cookies."""
         try:
-            url = f"{self._mojamreza_url}/Dostava/{omm}"
-            headers = {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                "Accept-Encoding": "gzip, deflate, br, zstd",
-                "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "cross-site",
-                "Upgrade-Insecure-Requests": "1",
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-            }
-            
+            url = f"{self._base_url}/Dostava/{self._omm_id}"
+
+            headers = self._headers.copy()
+            headers["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+            headers["Sec-Fetch-Dest"] = "document"
+            headers["Sec-Fetch-Mode"] = "navigate"
+            headers["Sec-Fetch-Site"] = "cross-site"
+            headers["Upgrade-Insecure-Requests"] = "1"
+
             async with self._session.get(url, headers=headers) as response:
                 if response.status == 200:
-                    _LOGGER.debug("OMM session initialized for %s", omm)
+                    text = await response.text()
+                    
+                    set_cookies = response.headers.getall("Set-Cookie", [])
+                    for cookie_str in set_cookies:
+                        cookie_parts = cookie_str.split(';')[0]
+                        if '=' in cookie_parts:
+                            key, value = cookie_parts.split('=', 1)
+                            self._cookies[key.strip()] = value.strip()
+                    
+                    self._headers["Cookie"] = "; ".join([f"{k}={v}" for k, v in self._cookies.items()])
+                    
+                    check_match = re.search(r'id="Provjera_Omm_Form_Div".*?name="__RequestVerificationToken" type="hidden" value="([^"]+)"', text, re.DOTALL)
+                    if check_match:
+                        self._check_form_token = check_match.group(1)
+                    
+                    delivery_match = re.search(r'id="Dostava_Omm_Div".*?name="__RequestVerificationToken" type="hidden" value="([^"]+)"', text, re.DOTALL)
+                    if delivery_match:
+                        self._delivery_form_token = delivery_match.group(1)
+                        
                     return True
                 else:
                     _LOGGER.error("Failed to initialize OMM session: %s", response.status)
@@ -285,103 +308,33 @@ class HepApiClient:
             _LOGGER.error("Error initializing OMM session: %s", e)
             return False
 
-    async def _get_omm_tokens(self, omm: str):
-        """Fetch OMM page to extract tokens."""
-        try:
-            # First, initialize the session to get cookies
-            await self._initialize_omm_session(omm)
-            
-            url = f"{self._mojamreza_url}/Dostava/{omm}"
-            async with self._session.get(url) as response:
-                if response.status == 200:
-                    text = await response.text()
-                    # Extract form token
-                    match = re.search(r'name="__RequestVerificationToken" type="hidden" value="([^"]+)"', text)
-                    form_token = match.group(1) if match else None
-                    
-                    # Extract session ID and cookie token from jar
-                    session_id = None
-                    cookie_token = None
-                    for cookie in self._session.cookie_jar:
-                        if cookie.key == "ASP.NET_SessionId":
-                            session_id = cookie.value
-                        elif cookie.key == "__RequestVerificationToken":
-                            cookie_token = cookie.value
-                            
-                    return session_id, cookie_token, form_token
-                else:
-                    _LOGGER.error("Failed to fetch OMM page: %s", response.status)
-                    return None, None, None
-        except Exception as e:
-            _LOGGER.error("Error fetching OMM tokens: %s", e)
-            return None, None, None
-
-    async def check_omm(self, omm: str, session_id: str = None, cookie_token: str = None, form_token: str = None) -> HepOmmCheck:
-        """
-        Check OMM status (Provjera_Omm).
-        If tokens are not provided, attempts to fetch them automatically.
-        """
-        try:
-            if self._session is None:
-                async with aiohttp.ClientSession() as session:
-                    # We can't easily auto-fetch with a fresh session as we lose context
-                    # But for consistency we can try if user provided nothing
-                    if not session_id or not form_token:
-                         # This path is unlikely to work for OMM if auth is needed
-                         pass
-                    return await self._check_omm_with_session(session, omm, session_id, cookie_token, form_token)
-            else:
-                # Auto-fetch tokens if missing
-                if not session_id or not form_token:
-                    fetched_session, fetched_cookie, fetched_form = await self._get_omm_tokens(omm)
-                    if fetched_form:
-                        form_token = fetched_form
-                        # If we found session cookies, use them. If not, use what we have (maybe None)
-                        if fetched_session: session_id = fetched_session
-                        if fetched_cookie: cookie_token = fetched_cookie
-                
-                return await self._check_omm_with_session(self._session, omm, session_id, cookie_token, form_token)
-        except Exception as e:
-            _LOGGER.error("Failed to check OMM: %s", e)
-            raise
-
-    async def _check_omm_with_session(self, session, omm: str, session_id: str, cookie_token: str, form_token: str) -> HepOmmCheck:
-        """Internal OMM check logic."""
+    async def check_omm(self) -> HepOmmCheck:
+        """OMM check logic."""
         try:
             async with async_timeout.timeout(10):
-                url = f"{self._mojamreza_url}/Omm/Provjera_Omm"
+                url = f"{self._base_url}/Omm/Provjera_Omm"
                 
-                headers = {
-                    "Accept": "application/json, text/javascript, */*; q=0.01",
-                    "Accept-Encoding": "gzip, deflate, br, zstd",
-                    "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                    "Origin": self._mojamreza_url,
-                    "Referer": f"{self._mojamreza_url}//Dostava/{omm}",
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-                    "X-Requested-With": "XMLHttpRequest"
-                }
-                
-                # Add Cookie header if we have tokens
-                cookies_list = []
-                if session_id:
-                    cookies_list.append(f"ASP.NET_SessionId={session_id}")
-                if cookie_token:
-                    cookies_list.append(f"__RequestVerificationToken={cookie_token}")
-                
-                if cookies_list:
-                    headers["Cookie"] = "; ".join(cookies_list)
+                headers = self._headers.copy()
+                headers["Accept"] = "application/json, text/javascript, */*; q=0.01"
+                headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+                headers["Origin"] = self._base_url
+                headers["Referer"] = f"{self._base_url}//Dostava/{self._omm_id}"
+                headers["Sec-Fetch-Dest"] = "empty"
+                headers["Sec-Fetch-Mode"] = "cors"
+                headers["Sec-Fetch-Site"] = "same-origin"
+                headers["X-Requested-With"] = "XMLHttpRequest"
                 
                 payload = {
                     "AntiSpamVM.EventField": "true",
                     "AntiSpamVM.Gd_check": "",
                     "AntiSpamVM.IsBot": "false",
                     "AntiSpamVM.Time": "100",
-                    "__RequestVerificationToken": form_token if form_token else "",
-                    "Provjera_OmmVM.Omm": omm
+                    "AntiSpamVM.FormCreated": f"{time.time():.3f}",
+                    "__RequestVerificationToken": self._check_form_token,
+                    "Provjera_OmmVM.Omm": self._omm_id,
                 }
                 
-                response = await session.post(
+                response = await self._session.post(
                     url,
                     data=payload,
                     headers=headers
@@ -389,9 +342,8 @@ class HepApiClient:
                 
                 if response.status == 200:
                     data = await response.json()
-                    # The response structure has "Provjera_OmmDto" key
-                    dto = data.get("Provjera_OmmDto", {})
-                    return HepOmmCheck.from_dict(dto)
+                    _LOGGER.debug("OMM check response: %s", data)
+                    return HepOmmCheckResult.from_dict(data)
                 else:
                     _LOGGER.error("OMM check failed with status: %s", response.status)
                     return None
@@ -399,54 +351,38 @@ class HepApiClient:
              _LOGGER.error("Error checking OMM: %s", e)
              raise
 
-    async def submit_reading(self, omm: str, session_id: str, cookie_token: str, form_token: str, enc_value: str, date: str, tarifa1: int, tarifa2: int, posalji: int = 0) -> HepReadingSubmissionResult:
-        """
-        Submit meter reading (Dostava).
-        Requires tokens and encValue from check_omm.
-        """
-        try:
-            if self._session is None:
-                async with aiohttp.ClientSession() as session:
-                    return await self._submit_reading_with_session(session, omm, session_id, cookie_token, form_token, enc_value, date, tarifa1, tarifa2, posalji)
-            else:
-                return await self._submit_reading_with_session(self._session, omm, session_id, cookie_token, form_token, enc_value, date, tarifa1, tarifa2, posalji)
-        except Exception as e:
-            _LOGGER.error("Failed to submit reading: %s", e)
-            raise
-
-    async def _submit_reading_with_session(self, session, omm: str, session_id: str, cookie_token: str, form_token: str, enc_value: str, date: str, tarifa1: int, tarifa2: int, posalji: int) -> HepReadingSubmissionResult:
-        """Internal reading submission logic."""
+    async def submit_reading(self, enc_value: str, reading_date: str, tarifa1: int, tarifa2: int, force_send: bool = False) -> HepReadingSubmissionResult:
+        """Submit reading logic."""
         try:
             async with async_timeout.timeout(10):
-                url = f"{self._mojamreza_url}/Omm/Dostava"
+                url = f"{self._base_url}/Omm/Dostava"
                 
-                headers = {
-                    "Accept": "application/json, text/javascript, */*; q=0.01",
-                    "Accept-Encoding": "gzip, deflate, br, zstd",
-                    "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                    "Origin": self._mojamreza_url,
-                    "Referer": f"{self._mojamreza_url}//Dostava/{omm}",
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
-                    "X-Requested-With": "XMLHttpRequest",
-                    "Cookie": f"ASP.NET_SessionId={session_id}; __RequestVerificationToken={cookie_token}"
-                }
+                headers = self._headers.copy()
+                headers["Accept"] = "application/json, text/javascript, */*; q=0.01"
+                headers["Content-Type"] = "application/x-www-form-urlencoded; charset=UTF-8"
+                headers["Origin"] = self._base_url
+                headers["Referer"] = f"{self._base_url}//Dostava/{self._omm_id}"
+                headers["Sec-Fetch-Dest"] = "empty"
+                headers["Sec-Fetch-Mode"] = "cors"
+                headers["Sec-Fetch-Site"] = "same-origin"
+                headers["X-Requested-With"] = "XMLHttpRequest"
                 
                 payload = {
                     "AntiSpamVM.EventField": "true",
                     "AntiSpamVM.Gd_check": "",
                     "AntiSpamVM.IsBot": "false",
                     "AntiSpamVM.Time": "100",
-                    "__RequestVerificationToken": form_token,
-                    "DostavaVM.Omm": omm,
+                    "AntiSpamVM.FormCreated": f"{time.time():.3f}",
+                    "__RequestVerificationToken": self._delivery_form_token,
+                    "DostavaVM.Omm": self._omm_id,
                     "encValue": enc_value,
-                    "DostavaVM.Posalji": str(posalji),
-                    "DostavaVM.Datum_Ocitanja": date,
+                    "DostavaVM.Posalji": str(1 if force_send else 0),
+                    "DostavaVM.Datum_Ocitanja": reading_date,
                     "DostavaVM.Tarifa1": str(tarifa1),
                     "DostavaVM.Tarifa2": str(tarifa2)
                 }
                 
-                response = await session.post(
+                response = await self._session.post(
                     url,
                     data=payload,
                     headers=headers
