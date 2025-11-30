@@ -75,7 +75,6 @@ class HepApiClient:
                 )
                 if response.status == 200:
                     data = await response.json()
-                    _LOGGER.debug(f"Raw login response: {data}")
                     self._token = data.get("token")
                     self._user_data = HepUser.from_dict(data)
                     
@@ -84,7 +83,6 @@ class HepApiClient:
                     for cookie in session.cookie_jar:
                         self._cookies[cookie.key] = cookie.value
                     
-                    _LOGGER.debug(f"Captured cookies: {self._cookies.keys()}")
                     return True
                 else:
                     _LOGGER.error("Login failed with status: %s", response.status)

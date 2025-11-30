@@ -14,6 +14,9 @@ sys.modules["homeassistant.const"] = MagicMock()
 sys.modules["homeassistant.helpers"] = MagicMock()
 sys.modules["homeassistant.helpers.aiohttp_client"] = MagicMock()
 
+# Add parent directory to path to find custom_components
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # Import after mocking
 from custom_components.hep.api import HepApiClient
 

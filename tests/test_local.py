@@ -17,6 +17,10 @@ sys.modules["homeassistant.helpers.update_coordinator"] = MagicMock()
 sys.modules["homeassistant.components"] = MagicMock()
 sys.modules["homeassistant.components.sensor"] = MagicMock()
 
+import os
+# Add parent directory to path to find custom_components
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from custom_components.hep.api import HepApiClient
 
 # Configure logging
