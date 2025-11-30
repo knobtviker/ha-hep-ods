@@ -207,14 +207,13 @@ class HepPricingSensor(HepBaseSensor):
             model = prices.bijeli
         
         # Calculate total price
-        proizvodnja = getattr(model.proizvodnja, self._attribute, 0)
-        prijenos = getattr(model.prijenos, self._attribute, 0)
-        distribucija = getattr(model.distribucija, self._attribute, 0)
+        proizvodnja = getattr(model.proizvodnja, self._attribute, 0.0)
+        prijenos = getattr(model.prijenos, self._attribute, 0.0)
+        distribucija = getattr(model.distribucija, self._attribute, 0.0)
         
-        total = proizvodnja + prijenos + distribucija + prices.oie + prices.opskrba
-        total_with_pdv = total * (1 + prices.pdv)
+        total = proizvodnja + prijenos + distribucija + prices.oie
         
-        return round(total_with_pdv, 6)
+        return round(total, 6)
 
     @property
     def extra_state_attributes(self):
@@ -238,19 +237,18 @@ class HepPricingSensor(HepBaseSensor):
         else:
             model = prices.bijeli
         
-        proizvodnja = getattr(model.proizvodnja, self._attribute, 0)
-        prijenos = getattr(model.prijenos, self._attribute, 0)
-        distribucija = getattr(model.distribucija, self._attribute, 0)
+        proizvodnja = getattr(model.proizvodnja, self._attribute, 0.0)
+        prijenos = getattr(model.prijenos, self._attribute, 0.0)
+        distribucija = getattr(model.distribucija, self._attribute, 0.0)
         
-        # rounding is wrong and each value is rounded separately per separate algorithm
         return {
             "tariff_model": account.tarifni_model,
-            "production": proizvodnja,
-            "transmission": prijenos,
-            "distribution": distribucija,
-            "renewable_energy_fee": prices.oie,
-            "supply": prices.opskrba,
-            "vat_rate": prices.pdv,
+            "production": round(proizvodnja, 6),
+            "transmission": round(prijenos, 6),
+            "distribution": round(distribucija, 6),
+            "renewable_energy_fee": round(prices.oie, 6),
+            "supply": round(prices.opskrba, 6),
+            "vat_rate": round(prices.pdv, 6),
         }
 
 
