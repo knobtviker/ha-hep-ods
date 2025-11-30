@@ -13,7 +13,7 @@ Home Assistant integration for HEP Elektra ODS electricity accounts in Croatia. 
 - 💵 **Current Pricing** - View real-time electricity prices (EUR/kWh) for VT/NT
 - 📈 **Consumption History** - Historical consumption data by period
 - ⚠️ **Payment Warnings** - Get notified about payment issues
-- 🔄 **Automatic Updates** - Data refreshes every 24 hours
+- 🔄 **Automatic Updates** - Data refreshes periodically (configurable 1-24 hours)
 - 📱 **Energy Dashboard** - Compatible with HA Energy Dashboard
 
 ## Installation
@@ -39,12 +39,23 @@ Home Assistant integration for HEP Elektra ODS electricity accounts in Croatia. 
 
 ## Configuration
 
+### Initial Setup
+
 1. Navigate to **Settings** → **Devices & Services**
 2. Click **Add Integration**
 3. Search for **HEP Elektra ODS**
 4. Enter your credentials:
    - **Email/Username**: Your HEP account email or username
    - **Password**: Your HEP account password
+
+### Configure Options
+
+After installation, you can customize the integration:
+
+1. Go to **Settings** → **Devices & Services** → **HEP Elektra ODS**
+2. Click the **Configure** button (gear icon)
+3. Adjust settings:
+   - **Update interval**: Set how often data is fetched (1-24 hours, default: 24)
 
 ## Sensors
 
@@ -67,6 +78,10 @@ Each HEP account creates 8 sensors:
 
 ### Alerts
 - `binary_sensor.hep_{account}_payment_warning` - Payment warning indicator
+  - **State ON**: Active warnings dated within the previous, current, or next month
+  - **State OFF**: No warnings or warnings outside the 3-month window
+  - Older warnings remain visible in sensor attributes but don't trigger the alert state
+  - This prevents false alarms from historical payment issues
 
 ## Energy Dashboard Setup
 
@@ -77,7 +92,7 @@ Each HEP account creates 8 sensors:
 
 ## Manual Refresh
 
-While data updates automatically every 24 hours, you can force a refresh:
+You can force an immediate data refresh at any time:
 
 **Settings** → **Devices & Services** → **HEP Elektra ODS** → **⋮** → **Reload**
 

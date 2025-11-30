@@ -12,13 +12,16 @@ _LOGGER = logging.getLogger(__name__)
 class HepDataUpdateCoordinator(DataUpdateCoordinator):
     """Class to manage fetching HEP data."""
 
-    def __init__(self, hass: HomeAssistant, client):
+    def __init__(self, hass: HomeAssistant, client, scan_interval: int = None):
         """Initialize."""
+        if scan_interval is None:
+            scan_interval = DEFAULT_SCAN_INTERVAL
+            
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(hours=DEFAULT_SCAN_INTERVAL),
+            update_interval=timedelta(hours=scan_interval),
         )
         self.client = client
 

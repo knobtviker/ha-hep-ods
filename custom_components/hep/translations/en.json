@@ -18,5 +18,19 @@
         "abort": {
             "already_configured": "This HEP account is already configured."
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "title": "HEP Elektra ODS Options",
+                "description": "Configure integration options",
+                "data": {
+                    "scan_interval": "Update interval (hours)"
+                },
+                "data_description": {
+                    "scan_interval": "How often to fetch data from HEP servers (1-24 hours)"
+                }
+            }
+        }
     }
 }

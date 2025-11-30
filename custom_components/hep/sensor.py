@@ -21,9 +21,14 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the HEP sensor platform."""
+    from .const import CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+    
     client = hass.data[DOMAIN][entry.entry_id]
+    
+    # Get scan interval from options, fallback to default
+    scan_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
 
-    coordinator = HepDataUpdateCoordinator(hass, client)
+    coordinator = HepDataUpdateCoordinator(hass, client, scan_interval)
     
     # Force immediate data fetch on setup (including when integration is reloaded)
     # This ensures fresh data is available immediately after reload
