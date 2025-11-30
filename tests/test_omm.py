@@ -112,7 +112,10 @@ async def main():
                             omm_reading = await omm_client.submit_reading(enc, reading_date, tarifa1, tarifa2, force_send)
                             if omm_reading:
                                 _LOGGER.debug("OMM reading submitted successfully!")
-                                _LOGGER.debug(f"OMM reading result: {omm_reading}")
+                                if omm_reading.posalji != 0:
+                                    _LOGGER.error("OMM sending reading submission failed! Consider FORCE sending!)
+                                else:
+                                    _LOGGER.debug("OMM sending reading submitted successfully!")
                             else:
                                 _LOGGER.error("OMM reading submission failed!")
                         except Exception as e:
