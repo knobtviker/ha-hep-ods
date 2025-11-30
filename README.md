@@ -109,7 +109,7 @@ Submit meter reading for your OMM device. The reading date is automatically set 
 ```yaml
 service: hep.submit_omm_reading
 data:
-  omm_id: "0126535651"
+  omm_id: "0123456789"
   tarifa1: 26124
   tarifa2: 11854
 ```
@@ -152,8 +152,6 @@ You can force an immediate data refresh at any time:
 - [Feature Requests](https://github.com/knobtviker/ha-hep-ods/issues/new)
 
 ## Credits
-
-Developed by Bojan Komljenovic
 
 *HEP Elektra ODS is a trademark of HEP d.d. This integration is unofficial and not affiliated with HEP.*
 
