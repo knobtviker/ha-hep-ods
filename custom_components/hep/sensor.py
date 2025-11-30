@@ -248,12 +248,12 @@ class HepPricingSensor(HepBaseSensor):
         
         return {
             "tariff_model": account.tarifni_model,
-            "production": round(proizvodnja, 6),
-            "transmission": round(prijenos, 6),
-            "distribution": round(distribucija, 6),
-            "renewable_energy_fee": round(prices.oie, 6),
-            "supply": round(prices.opskrba, 6),
-            "vat_rate": round(prices.pdv, 6),
+            "production": f"{proizvodnja:.6f}",
+            "transmission": f"{prijenos:.6f}",
+            "distribution": f"{distribucija:.6f}",
+            "renewable_energy_fee": f"{prices.oie:.6f}",
+            "supply": f"{prices.opskrba:.6f}",
+            "vat_rate": f"{prices.pdv:.6f}",
         }
 
 
