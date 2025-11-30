@@ -69,11 +69,7 @@ async def main():
     print("--- Starting HEP OMM API Test ---")
 
     load_dotenv()
-    username = os.getenv("HEP_USERNAME")
-    password = os.getenv("HEP_PASSWORD")
     omm_id = os.getenv("HEP_OMM")
-
-    print(f"Testing with user: {username}")
 
     # Create trace config
     trace_config = aiohttp.TraceConfig()
@@ -82,48 +78,30 @@ async def main():
     trace_config.on_request_end.append(on_request_end)
 
     async with aiohttp.ClientSession(trace_configs=[trace_config]) as session:
-        client = HepApiClient(username, password, session)
 
-        _LOGGER.debug("\n[1] Authenticating...")
-        if await client.authenticate():
-            _LOGGER.debug("Authentication SUCCESS")
-        else:
-            print("Authentication FAILED")
-            return
-
-        _LOGGER.debug(f"\n[2] Checking OMM initialize for {omm_id}...")
+        _LOGGER.debug(f"\n[1] Checking OMM initialize for {omm_id}...")
         try:
-            omm_client = HepOmmClient(omm_id, session)
-            omm_initialize_check = await omm_client.initialize_session()
-            if omm_initialize_check:
-                _LOGGER.debug("OMM initialize successful!")
+            omm_client = HepOmmClient(omm_id)
+            omm_client.setSession(session)
 
-                _LOGGER.debug(f"\n[3] Checking OMM status for {omm_id}...")
-                try:
-                    omm_check = await omm_client.check_omm()
-                    if omm_check:
-                        _LOGGER.debug(f"\n[4] Submitting reading for {omm_id}...")
-                        try:
-                            enc = omm_check.enc_value
-                            reading_date = "30.11.2025."
-                            tarifa1 = 26123
-                            tarifa2 = 11853
-                            force_send = False
-                            omm_reading = await omm_client.submit_reading(enc, reading_date, tarifa1, tarifa2, force_send)
-                            if omm_reading:
-                                _LOGGER.debug("OMM reading submitted successfully!")
-                                if omm_reading.posalji != 0:
-                                    _LOGGER.error("OMM sending reading submission failed! Consider FORCE sending!)
-                                else:
-                                    _LOGGER.debug("OMM sending reading submitted successfully!")
-                            else:
-                                _LOGGER.error("OMM reading submission failed!")
-                        except Exception as e:
-                            _LOGGER.error(f"Error submitting reading: {e}")    
-                except Exception as e:
-                    _LOGGER.error(f"Error checking OMM status: {e}")
+            reading_date = "30.11.2025."
+            tarifa1 = 26124
+            tarifa2 = 11854
+            force_send = False
+            
+            send_reading = await omm_client.send_reading(reading_date, tarifa1, tarifa2, force_send)
+            
+            if send_reading:
+                _LOGGER.debug("OMM reading submitted successfully!")
             else:
-                _LOGGER.error("OMM initialize returned None")
+                _LOGGER.error("OMM reading submission failed!")
+
+                force_send_reading = await omm_client.send_reading(reading_date, tarifa1, tarifa2, True)
+            
+                if force_send_reading:
+                    _LOGGER.debug("OMM FORCE reading submitted successfully!")
+                else:
+                    _LOGGER.error("OMM FORCE reading submission failed!")
         except Exception as e:
             _LOGGER.error(f"Error initialize OMM: {e}")
 

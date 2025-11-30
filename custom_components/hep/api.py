@@ -248,10 +248,10 @@ class HepApiClient:
 class HepOmmClient:
     """HEP OMM Client."""
 
-    def __init__(self, omm_id, session):
+    def __init__(self, omm_id):
         """Initialize the OMM client."""
         self._omm_id = omm_id
-        self._session = session
+        self._session = None
         self._cookies = {}
         self._base_url = "https://mojamreza.hep.hr"
         self._headers = {
@@ -267,7 +267,68 @@ class HepOmmClient:
         self._check_form_token = ""
         self._delivery_form_token = ""
 
-    async def initialize_session(self):
+    def setSession(self, session):
+        """Set the session for testing purposes."""
+        self._session = session    
+
+    async def send_reading(self, reading_date: str, tarifa1: int, tarifa2: int, force_send: bool = False) -> bool:
+        """Send reading to the server."""
+        try:
+            if self._session is None:
+                async with aiohttp.ClientSession() as session:
+                    return await self._send_reading_with_session(session, reading_date, tarifa1, tarifa2, force_send)
+            else:
+                return await self._send_reading_with_session(self._session, reading_date, tarifa1, tarifa2, force_send)
+        except Exception as e:
+            _LOGGER.error("Sending reading failed: %s", e)
+            return False    
+
+    async def _send_reading_with_session(self, session, reading_date: str, tarifa1: int, tarifa2: int, force_send: bool = False) -> bool:
+        """Send reading to the server with session."""
+        try:
+            omm_initialize_check = await self._initialize_with_session(session)
+            if omm_initialize_check:
+                try:
+                    omm_check = await self._check_omm_with_session(session)
+                    if omm_check:
+                        try:
+                            enc = omm_check.enc_value
+                            omm_reading = await self._submit_reading_with_session(session, enc, reading_date, tarifa1, tarifa2, force_send)
+                            if omm_reading:
+                                if omm_reading.status == 1:
+                                    _LOGGER.debug("OMM reading submitted successfully!")
+                                    if (omm_reading.posalji != 0):
+                                        _LOGGER.error("OMM reading submission failed! Try FORCE sending!")
+                                        return False
+                                    return True
+                                else:
+                                    _LOGGER.error("OMM reading submission failed!")
+                                    return False
+                            else:   
+                                _LOGGER.error("OMM reading submission failed!")
+                                return False
+                        except Exception as e:
+                            _LOGGER.error(f"Error submitting reading: {e}")    
+                except Exception as e:
+                    _LOGGER.error(f"Error checking OMM status: {e}")
+            else:
+                _LOGGER.error("OMM initialize returned None")
+        except Exception as e:
+            _LOGGER.error(f"Error initialize OMM: {e}")        
+
+    async def initialize(self):
+        """Initialize session by visiting the Dostava page to get cookies."""
+        try:
+            if self._session is None:
+                async with aiohttp.ClientSession() as session:
+                    return await self._initialize_with_session(session)
+            else:
+                return await self._initialize_with_session(self._session)
+        except Exception as e:
+            _LOGGER.error(f"Error initialize OMM: {e}")
+            return False
+
+    async def _initialize_with_session(self, session):
         """Initialize session by visiting the Dostava page to get cookies."""
         try:
             url = f"{self._base_url}/Dostava/{self._omm_id}"
@@ -279,7 +340,7 @@ class HepOmmClient:
             headers["Sec-Fetch-Site"] = "cross-site"
             headers["Upgrade-Insecure-Requests"] = "1"
 
-            async with self._session.get(url, headers=headers) as response:
+            async with session.get(url, headers=headers) as response:
                 if response.status == 200:
                     text = await response.text()
                     
@@ -308,7 +369,19 @@ class HepOmmClient:
             _LOGGER.error("Error initializing OMM session: %s", e)
             return False
 
-    async def check_omm(self) -> HepOmmCheck:
+    async def check_omm(self):
+        """OMM check logic."""
+        try:
+            if self._session is None:
+                async with aiohttp.ClientSession() as session:
+                    return await self._check_omm_with_session(session)
+            else:
+                return await self._check_omm_with_session(self._session)
+        except Exception as e:
+            _LOGGER.error("Error checking OMM: %s", e)
+            return False
+    
+    async def _check_omm_with_session(self, session) -> HepOmmCheck:
         """OMM check logic."""
         try:
             async with async_timeout.timeout(10):
@@ -334,7 +407,7 @@ class HepOmmClient:
                     "Provjera_OmmVM.Omm": self._omm_id,
                 }
                 
-                response = await self._session.post(
+                response = await session.post(
                     url,
                     data=payload,
                     headers=headers
@@ -342,7 +415,6 @@ class HepOmmClient:
                 
                 if response.status == 200:
                     data = await response.json()
-                    _LOGGER.debug("OMM check response: %s", data)
                     return HepOmmCheckResult.from_dict(data)
                 else:
                     _LOGGER.error("OMM check failed with status: %s", response.status)
@@ -351,7 +423,19 @@ class HepOmmClient:
              _LOGGER.error("Error checking OMM: %s", e)
              raise
 
-    async def submit_reading(self, enc_value: str, reading_date: str, tarifa1: int, tarifa2: int, force_send: bool = False) -> HepReadingSubmissionResult:
+    async def submit_reading(self, reading_date: str, tarifa1: int, tarifa2: int, force_send: bool = False) -> HepReadingSubmissionResult:
+        """Submit reading logic."""
+        try:
+            if self._session is None:
+                async with aiohttp.ClientSession() as session:
+                    return await self._submit_reading_with_session(session, reading_date, tarifa1, tarifa2, force_send)
+            else:
+                return await self._submit_reading_with_session(self._session, reading_date, tarifa1, tarifa2, force_send)
+        except Exception as e:
+            _LOGGER.error("Error submitting reading: %s", e)
+            raise
+    
+    async def _submit_reading_with_session(self, session, enc_value: str, reading_date: str, tarifa1: int, tarifa2: int, force_send: bool = False) -> HepReadingSubmissionResult:
         """Submit reading logic."""
         try:
             async with async_timeout.timeout(10):
@@ -382,7 +466,7 @@ class HepOmmClient:
                     "DostavaVM.Tarifa2": str(tarifa2)
                 }
                 
-                response = await self._session.post(
+                response = await session.post(
                     url,
                     data=payload,
                     headers=headers
