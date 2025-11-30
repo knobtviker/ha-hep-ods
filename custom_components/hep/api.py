@@ -259,9 +259,38 @@ class HepApiClient:
              _LOGGER.error("Error fetching warnings: %s", e)
              raise
 
+    async def _initialize_omm_session(self, omm: str):
+        """Initialize OMM session by visiting the Dostava page to get cookies."""
+        try:
+            url = f"{self._mojamreza_url}/Dostava/{omm}"
+            headers = {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                "Accept-Encoding": "gzip, deflate, br, zstd",
+                "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "cross-site",
+                "Upgrade-Insecure-Requests": "1",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+            }
+            
+            async with self._session.get(url, headers=headers) as response:
+                if response.status == 200:
+                    _LOGGER.debug("OMM session initialized for %s", omm)
+                    return True
+                else:
+                    _LOGGER.error("Failed to initialize OMM session: %s", response.status)
+                    return False
+        except Exception as e:
+            _LOGGER.error("Error initializing OMM session: %s", e)
+            return False
+
     async def _get_omm_tokens(self, omm: str):
         """Fetch OMM page to extract tokens."""
         try:
+            # First, initialize the session to get cookies
+            await self._initialize_omm_session(omm)
+            
             url = f"{self._mojamreza_url}/Dostava/{omm}"
             async with self._session.get(url) as response:
                 if response.status == 200:

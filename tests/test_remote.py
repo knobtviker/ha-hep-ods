@@ -4,6 +4,7 @@ import logging
 import os
 import sys
 from unittest.mock import MagicMock
+from dotenv import load_dotenv
 
 # Mock Home Assistant modules
 # Mock Home Assistant modules
@@ -30,10 +31,11 @@ _LOGGER = logging.getLogger(__name__)
 async def main():
     print("--- Starting HEP Remote API Test ---")
 
-    # Using credentials from mock_server.py (Index 1)
-    username = "bojan.komljenovic@gmail.com"
-    password = "uWKrB.J62nN2zP3Xh8qd@B6KtYDkw7TH"
-    omm_id = "0126535651"
+    
+    load_dotenv()
+    username = os.getenv("HEP_USERNAME")
+    password = os.getenv("HEP_PASSWORD")
+    omm_id = os.getenv("HEP_OMM")
 
     print(f"Testing with user: {username}")
 
@@ -46,16 +48,16 @@ async def main():
         print("\n[1] Authenticating...")
         if await client.authenticate():
             print("Authentication SUCCESS")
-            print(f"\n[DEBUG] Cookie Jar Size: {len(session.cookie_jar)}")
-            for cookie in session.cookie_jar:
-                print(f"  {cookie.key}: {cookie.value} (Domain: {cookie['domain']})")
             
-            # Check if we have tokens in user_data
-            # We need to access the raw dict if possible, but we have the object.
-            # Let's just inspect the object properties we have.
-            # HepUser doesn't store the raw token if it was in the response but not in the model.
-            # But we can check if the response had it.
-            # For now, let's rely on cookies.
+            # Display captured cookies from the API client
+            print(f"\n[DEBUG] Captured Cookies (stored in client): {len(client._cookies)}")
+            for key, value in client._cookies.items():
+                print(f"  {key}: {value}")
+            
+            # Also show session cookie jar for comparison
+            print(f"\n[DEBUG] Session Cookie Jar Size: {len(session.cookie_jar)}")
+            for cookie in session.cookie_jar:
+                print(f"  {cookie.key} (Domain: {cookie['domain']})")
         else:
             print("Authentication FAILED")
             return
@@ -129,8 +131,32 @@ async def main():
             except Exception as e:
                 print(f"Error fetching warnings: {e}")
 
-        # OMM check skipped - requires separate authentication flow
-        print("\n[7] OMM check - skipped (requires browser session tokens)")
+
+        # OMM check - now using auto-token fetching
+        if user_data and user_data.accounts:
+            account = user_data.accounts[0]
+            omm_id = account.broj_brojila
+            
+            print(f"\n[7] Checking OMM status for {omm_id}...")
+            try:
+                # The client will automatically fetch tokens from the OMM page
+                omm_check = await client.check_omm(omm_id)
+                if omm_check:
+                    print("OMM check successful!")
+                    print(f"  OMM: {omm_check.omm}")
+                    print(f"  Number of tariffs: {omm_check.br_tarifa}")
+                    print(f"  Status: {omm_check.status.opis} (code: {omm_check.status.status})")
+                    if omm_check.br_tarifa >= 1:
+                        print(f"  Tariff 1 range: {omm_check.tarifa1_od} - {omm_check.tarifa1_do}")
+                    if omm_check.br_tarifa >= 2:
+                        print(f"  Tariff 2 range: {omm_check.tarifa2_od} - {omm_check.tarifa2_do}")
+                else:
+                    print("OMM check returned None")
+            except Exception as e:
+                print(f"Error checking OMM: {e}")
+        else:
+            print("\n[7] OMM check - skipped (no account data)")
+
 
     print("\n--- Test Finished ---")
 
