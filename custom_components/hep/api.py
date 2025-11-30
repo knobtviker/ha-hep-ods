@@ -17,6 +17,7 @@ class HepApiClient:
         self._password = password
         self._session = session
         self._user_data = None
+        self._cookies = {}
         # Real HEP API URL
         self._base_url = "https://mojracun.hep.hr/elektra/v1/api"
         self._mojamreza_url = "https://mojamreza.hep.hr"
@@ -38,6 +39,13 @@ class HepApiClient:
     def set_mojamreza_url(self, url):
         """Set Moja Mreza URL (for testing)."""
         self._mojamreza_url = url
+
+
+# We aren't setting Cookie header with these values and accessToken is one of them: 
+
+# _ga_EV31QJNEL6=GS2.2.s1762104619$o2$g0$t1762104619$j60$l0$h0; _ga_6BQVKC4H63=GS2.2.s1762104619$o2$g0$t1762104619$j60$l0$h0; _ga=GA1.1.554793247.1762102536; _ga_DLRESD84RV=GS2.1.s1764433944$o1$g1$t1764434506$j60$l0$h0; accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJib2phbi5rb21samVub3ZpY0BnbWFpbC5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiYm9qYW4ua29tbGplbm92aWNAZ21haWwuY29tIiwiaWQiOiI5MDI3MTE0MyIsImp0aSI6ImRhYjVmZGM5LTEwNGMtNGMzNi05ZDk5LWRlNzI0Y2VjMDRmNSIsImV4cCI6MTc2NDQ0NDc4MCwiaXNzIjoibW9qcmFjdW4uaGVwLmhyIiwiYXVkIjoidXNlcnMifQ.RJdjS8on2uHp8gEEsRfdBF8V60esMi4PDhuofF3V3EY; TS0132729f=01e51bd9b2d61f4a1478d4db188bcd993d94a32a204fd67b62140c6b984616a6294eb51168f2c4839a1b139913bce2a493de7831a10e39bfad96ba57af137bfb1d61799cd2
+
+# Authentication sets that token exatly in response headers set-cookie twice with different values.
 
     async def authenticate(self) -> bool:
         """Authenticate with the API and fetch data."""
@@ -70,6 +78,13 @@ class HepApiClient:
                     _LOGGER.debug(f"Raw login response: {data}")
                     self._token = data.get("token")
                     self._user_data = HepUser.from_dict(data)
+                    
+                    # Capture cookies from the session cookie jar
+                    # This is crucial because we might be using a temporary session
+                    for cookie in session.cookie_jar:
+                        self._cookies[cookie.key] = cookie.value
+                    
+                    _LOGGER.debug(f"Captured cookies: {self._cookies.keys()}")
                     return True
                 else:
                     _LOGGER.error("Login failed with status: %s", response.status)
@@ -107,9 +122,14 @@ class HepApiClient:
         """Internal price fetch logic."""
         try:
             async with async_timeout.timeout(10):
+                headers = self._headers.copy()
+                if self._cookies:
+                    cookie_str = "; ".join([f"{k}={v}" for k, v in self._cookies.items()])
+                    headers["Cookie"] = cookie_str
+
                 response = await session.get(
                     f"{self._base_url}/obracun/cjenik",
-                    headers=self._headers
+                    headers=headers
                 )
                 
                 if response.status == 200:
@@ -142,9 +162,14 @@ class HepApiClient:
         """Internal billing fetch logic."""
         try:
             async with async_timeout.timeout(10):
+                headers = self._headers.copy()
+                if self._cookies:
+                    cookie_str = "; ".join([f"{k}={v}" for k, v in self._cookies.items()])
+                    headers["Cookie"] = cookie_str
+
                 response = await session.get(
                     f"{self._base_url}/promet/{kupac_id}",
-                    headers=self._headers
+                    headers=headers
                 )
                 
                 if response.status == 200:
@@ -176,9 +201,14 @@ class HepApiClient:
         """Internal consumption fetch logic."""
         try:
             async with async_timeout.timeout(10):
+                headers = self._headers.copy()
+                if self._cookies:
+                    cookie_str = "; ".join([f"{k}={v}" for k, v in self._cookies.items()])
+                    headers["Cookie"] = cookie_str
+
                 response = await session.get(
                     f"{self._base_url}/potrosnja/{kupac_id}",
-                    headers=self._headers
+                    headers=headers
                 )
                 
                 if response.status == 200:
@@ -211,9 +241,14 @@ class HepApiClient:
         """Internal warnings fetch logic."""
         try:
             async with async_timeout.timeout(10):
+                headers = self._headers.copy()
+                if self._cookies:
+                    cookie_str = "; ".join([f"{k}={v}" for k, v in self._cookies.items()])
+                    headers["Cookie"] = cookie_str
+
                 response = await session.get(
                     f"{self._base_url}/opomene/{kupac_id}",
-                    headers=self._headers
+                    headers=headers
                 )
                 
                 if response.status == 200:

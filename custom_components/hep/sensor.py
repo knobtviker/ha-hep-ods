@@ -314,13 +314,14 @@ class HepPricingSensor(HepBaseSensor):
         prijenos = getattr(model.prijenos, self._attribute, 0)
         distribucija = getattr(model.distribucija, self._attribute, 0)
         
+        # rounding is wrong and each value is rounded separately per separate algorithm
         return {
             "tariff_model": account.tarifni_model,
-            "production": round(proizvodnja, 6),
-            "transmission": round(prijenos, 6),
-            "distribution": round(distribucija, 6),
-            "renewable_energy_fee": round(prices.oie, 6),
-            "supply": round(prices.opskrba, 6),
+            "production": proizvodnja,
+            "transmission": prijenos,
+            "distribution": distribucija,
+            "renewable_energy_fee": prices.oie,
+            "supply": prices.opskrba,
             "vat_rate": prices.pdv,
         }
 
