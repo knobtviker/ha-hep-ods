@@ -90,6 +90,44 @@ Each HEP account creates 8 sensors:
 3. Select the T1 and/or T2 meter reading sensors
 4. Configure pricing using the price sensors if desired
 
+## OMM Services (Meter Reading Submission)
+
+Submit your electricity meter readings directly to HEP OMM system from Home Assistant.
+
+### Submit OMM Reading
+
+Submit meter reading for your OMM device. The reading date is automatically set to today's date.
+
+**Service**: `hep.submit_omm_reading`
+
+**Parameters**:
+- `omm_id`: Meter ID (10 digits) - Auto-filled from your account if configured
+- `tarifa1`: Reading for Tariff 1 (integer > 0)
+- `tarifa2`: Reading for Tariff 2 (integer > 0)
+
+**Example**:
+```yaml
+service: hep.submit_omm_reading
+data:
+  omm_id: "0126535651"
+  tarifa1: 26124
+  tarifa2: 11854
+```
+
+**Usage via UI**:
+1. Go to **Developer Tools** → **Services**
+2. Select **HEP Elektra ODS: Submit OMM Reading**
+3. Fill in the form (OMM ID will be pre-filled if available)
+4. Click **Call Service**
+
+### Force Submit OMM Reading
+
+If normal submission fails (e.g., reading already exists), you can force submit:
+
+**Service**: `hep.force_submit_omm_reading`
+
+Use this when the normal submit fails and you need to override the existing reading.
+
 ## Manual Refresh
 
 You can force an immediate data refresh at any time:

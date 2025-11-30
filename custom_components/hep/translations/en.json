@@ -32,5 +32,43 @@
                 }
             }
         }
+    },
+    "services": {
+        "submit_omm_reading": {
+            "name": "Submit OMM Reading",
+            "description": "Submit meter reading to HEP Elektra ODS",
+            "fields": {
+                "omm_id": {
+                    "name": "OMM ID",
+                    "description": "Meter ID"
+                },
+                "tarifa1": {
+                    "name": "Tarifa 1",
+                    "description": "Reading for tariff 1"
+                },
+                "tarifa2": {
+                    "name": "Tarifa 2",
+                    "description": "Reading for tariff 2"
+                }
+            }
+        },
+        "force_submit_omm_reading": {
+            "name": "Force Submit OMM Reading",
+            "description": "Force submit meter reading to HEP Elektra ODS (use when normal submit fails)",
+            "fields": {
+                "omm_id": {
+                    "name": "OMM ID",
+                    "description": "Meter ID"
+                },
+                "tarifa1": {
+                    "name": "Tarifa 1",
+                    "description": "Reading for tariff 1"
+                },
+                "tarifa2": {
+                    "name": "Tarifa 2",
+                    "description": "Reading for tariff 2"
+                }
+            }
+        }
     }
 }
